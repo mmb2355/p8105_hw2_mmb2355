@@ -1,0 +1,73 @@
+---
+title: "Homework 2"
+author: "Meghan Brown (mmb2355)<br>"
+date: "2026-10-07"
+output: github_document
+editor_options: 
+  chunk_output_type: console
+---
+## Problem 0
+
+### libraries
+
+```{r}
+library(tidyverse)
+library(readxl)
+```
+
+## Problem 1
+
+### read and clean data; character to logical variable
+
+```{r}
+nyc_transit_df =
+  read_csv(
+    "NYC_Transit_Subway_Entrance_And_Exit_Data.csv",
+    col_types = cols(Route8 = "c", Route9 = "c", Route10 = "c", Route11 = "c")) |> 
+  janitor::clean_names() |> 
+  select(
+    line, station_name, station_latitude, station_longitude, 
+    starts_with("route"), entry, exit_only, vending, entrance_type, 
+    ada) |> 
+  mutate(entry = ifelse(entry == "YES", TRUE, FALSE)
+    )
+```
+
+In nyc_transit_df, the variables are station name, staion latitude, station longitude, routes served, entry, exit, vending, entrance type, and ADA compliance. The data was read and cleaned, and the entry variable was changed from a character to logical variable. There are 1,868 rows and 20 columns. The data is not tidy yet because "route" and "route number" are not variables after the prior adjustments.
+
+### Number of distinct stations
+
+```{r}
+nyc_transit_df |> 
+  filter(ada == TRUE) |> 
+  select(station_name, line) |> 
+  distinct()
+```
+
+There are 84 distinct stations in this datafile.
+
+### ADA compliance
+
+```{r}
+nyc_transit_df |> 
+  pivot_longer(
+    route1:route11,
+    names_to = "route_num",
+    values_to = "route") |> 
+  filter(route == "A", ada == TRUE) |> 
+  select(station_name, line) |> 
+  distinct()
+```
+
+There are 17 stations that are ADA compliant.
+
+### Proportion of station entrances/exits w/o vending
+
+```{r}
+nyc_transit_df |> 
+  filter(vending == "NO") |> 
+  pull(entry) |> 
+  mean()
+```
+
+The proportion of station entrances to exits that do not have vending that allow entrance is 0.38.
