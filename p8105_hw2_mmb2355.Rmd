@@ -39,14 +39,50 @@ In nyc_transit_df, the variables are station name, staion latitude, station long
 
 ```{r}
 nyc_transit_df |> 
+  select(station_name, line) |> 
+  distinct()
+```
+
+There are 465 distinct stations in this datafile.
+
+### ADA compliance
+
+```{r}
+nyc_transit_df |> 
   filter(ada == TRUE) |> 
   select(station_name, line) |> 
   distinct()
 ```
 
-There are 84 distinct stations in this datafile.
+There are 84 stations that are ADA compliant.
 
-### ADA compliance
+### Proportion of station entrances/exits w/o vending
+
+```{r}
+nyc_transit_df |> 
+  filter(vending == "NO") |> 
+  pull(entry) |> 
+  mean()
+```
+
+The proportion of station entrances/exits that do not have vending that allow entrance is 0.38.
+
+### A train
+
+```{r}
+nyc_transit_df |> 
+  pivot_longer(
+    route1:route11,
+    names_to = "route_num",
+    values_to = "route") |> 
+  filter(route == "A") |> 
+  select(station_name, line) |> 
+  distinct()
+```
+
+There are 60 stations that serve the A train.
+
+### A train & ADA compliance
 
 ```{r}
 nyc_transit_df |> 
@@ -59,15 +95,84 @@ nyc_transit_df |>
   distinct()
 ```
 
-There are 17 stations that are ADA compliant.
+There are 17 stations that serve the A line and are ADA compliant.
 
-### Proportion of station entrances/exits w/o vending
+## Problem 2
+
+### Mr. Trash Wheel
 
 ```{r}
-nyc_transit_df |> 
-  filter(vending == "NO") |> 
-  pull(entry) |> 
-  mean()
+mr_tw_df =
+  readxl::read_excel(
+    path = "202610 Trash Wheel Collection Data.xlsx",
+    sheet = "Mr. Trash Wheel", 
+    na = c("", ".","NA"), 
+    skip = 1
+    ) |> 
+janitor::clean_names() |> 
+drop_na(dumpster) |> 
+  mutate(
+    sports_balls = as.integer(round(sports_balls)),
+    trash_wheel = "Mr. Trash Wheel",
+    year = as.numeric(year),
+    plastic_bottles = as.numeric(plastic_bottles)
+  )
+
+select(mr_tw_df, sports_balls)
 ```
 
-The proportion of station entrances to exits that do not have vending that allow entrance is 0.38.
+### Professor Trash Wheel
+
+```{r}
+prof_tw_df =
+  readxl::read_excel(
+    path = "202610 Trash Wheel Collection Data.xlsx",
+    sheet = "Professor Trash Wheel", 
+    na = c("", ".","NA"), 
+    skip = 1
+    ) |> 
+janitor::clean_names() |> 
+drop_na(dumpster) |> 
+mutate(
+  trash_wheel = "Professor Trash Wheel",
+  year = as.numeric(year),
+  plastic_bottles = as.numeric(plastic_bottles)
+)
+```
+
+### Gwynnda the Good Wheel of the W
+
+```{r}
+gwynnda_df =
+  readxl::read_excel(
+    path = "202610 Trash Wheel Collection Data.xlsx",
+    sheet = "Gwynnda the Good Wheel of the W", 
+    na = c("", ".","NA"), 
+    skip = 1
+    ) |> 
+janitor::clean_names() |> 
+drop_na(dumpster) |> 
+mutate(
+  trash_wheel = "Gwynnda the Good Wheel of the W",
+  year = as.numeric(year),
+  plastic_bottles = as.numeric(plastic_bottles)
+)
+```
+
+### Combine trash wheel dfs
+
+```{r}
+trash_wheel_df =
+  bind_rows(mr_tw_df, prof_tw_df, gwynnda_df) |> 
+  relocate(trash_wheel)
+
+prof_tw_df |>
+  pull(weight_tons)|>
+  sum(na.rm = TRUE)
+
+gwynnda_df |> 
+  filter(between(date, as.Date("2022-06-01"), as.Date("2022-06-30"))) |>
+  summarize(total_cigs = sum(cigarette_butts, na.rm = TRUE))
+```
+
+In trash_wheel_df, there are 1,269 observations and key variables are plastic bottles, dumpster, year, and trash wheel type. The total weight of trash collected by Professor Trash Wheel is 294.96 tons. There is a total of 18,120 cigarette butts collected by Gwynnda in June of 2022.
