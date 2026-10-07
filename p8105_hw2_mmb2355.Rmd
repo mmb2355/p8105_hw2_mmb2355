@@ -117,8 +117,6 @@ drop_na(dumpster) |>
     year = as.numeric(year),
     plastic_bottles = as.numeric(plastic_bottles)
   )
-
-select(mr_tw_df, sports_balls)
 ```
 
 ### Professor Trash Wheel
@@ -164,9 +162,8 @@ mutate(
 ```{r}
 trash_wheel_df =
   bind_rows(mr_tw_df, prof_tw_df, gwynnda_df) |> 
-  relocate(trash_wheel)
-
-nrow(trash_wheel_df)
+  relocate(trash_wheel) |>
+  nrow()
 
 prof_tw_df |>
   pull(weight_tons)|>
@@ -181,7 +178,7 @@ In trash_wheel_df, there are 1,269 observations and key variables are plastic bo
 
 ## Problem 3
 
-### Upload MCI baseline data
+### Import MCI baseline data
 
 ```{r}
 baseline_raw_df =
@@ -189,20 +186,14 @@ baseline_raw_df =
   na = c("",".","NA"), skip = 1) |>
   janitor::clean_names() |>
   mutate(
-    sex = recode_values(
-      sex,
-      0 ~ "Female",
-      1 ~ "Male"),
-    apoe4 = recode_values(
-      apoe4,
-      0 ~ "Non-Carrier",
-      1 ~ "Carrier")
-  )
+    sex = recode_values(sex, 0 ~ "Female", 1 ~ "Male"),
+    apoe4 = recode_values(apoe4, 0 ~ "Non-Carrier",1 ~ "Carrier")
+  ) 
 
 baseline_new_df =
   baseline_raw_df |>
-    filter(is.na(age_at_onset) | age_at_onset > current_age)
-  
+  filter(is.na(age_at_onset) | age_at_onset > current_age)
+
 nrow(baseline_raw_df)
 nrow(baseline_new_df)
 
@@ -225,3 +216,46 @@ baseline_new_df |>
 The important steps in importing baseline data is that I had to exclude those who had MCI at baseline; I had to set up a condition to drop rows that had MCI at baseline. Also, I had to change sex and apoe4 variables from a numeric to character variable, so I used the case_match function.
 
 There are 483 participants that were recruited, and 479 remain after excluding those who had MCI at baseline. A total of 97 participants (4 at baseline, 93 at end of study) have developed MCI. For those not excluded, the average baseline age is 65.03 years. The proportion of women that are APOE4 carriers in the study is 0.3 (30%).
+
+### Import MCI amyloid data
+
+```{r}
+amyloid_df =
+  read.csv("mci_amyloid.csv", 
+  na = c("",".","NA"), skip = 1) |>
+  janitor::clean_names() |>
+  rename(id = study_id) |>
+  pivot_longer(
+    cols = baseline:time_8,
+    names_to = "time",
+    names_prefix = "time_",
+    values_to = "amyloid"
+  ) |>
+  mutate(
+    time = case_match(time, "baseline" ~ "0", .default = time),
+    time = as.numeric(time)
+  ) |>
+  drop_na(amyloid)
+```
+
+The important steps in tidying this datafile was pivoting it to be long instead of wide. Additionally, I had to match the baseline and "time_" variables to code for the same variable (time).
+
+### Combine MCI data
+
+```{r}
+baseline_only = 
+  anti_join(baseline_new_df, amyloid_df, by = "id") |>
+  summarize(n_participants = n_distinct(id))
+
+amyloid_only =
+  anti_join(amyloid_df, baseline_new_df, by = "id") |>
+  summarize(n_participants = n_distinct(id))
+
+MCI_df =
+  inner_join(baseline_new_df, amyloid_df, by = "id") |>
+  summarize(n_participants = n_distinct(id))
+
+write_csv(MCI_df, "MCI_combined.csv")
+```
+
+There are 8 participants that are only in baseline_new_df and 16 only in amyloid_df. When combining the two datasets, there is a total of 471 participants that appear in both.
