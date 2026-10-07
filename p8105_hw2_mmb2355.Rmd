@@ -182,41 +182,37 @@ In trash_wheel_df, there are 1,269 observations and key variables are plastic bo
 ### Import MCI baseline data
 
 ```{r}
-baseline_raw_df =
+baseline_raw =
   read.csv("MCI_baseline.csv", 
   na = c("",".","NA"), skip = 1) |>
   janitor::clean_names() |>
   mutate(
     sex = recode_values(sex, 0 ~ "Female", 1 ~ "Male"),
-    apoe4 = recode_values(apoe4, 0 ~ "Non-Carrier",1 ~ "Carrier")
+    apoe4 = recode_values(apoe4, 0 ~ "Non-Carrier", 1 ~ "Carrier")
   ) 
 
-baseline_new_df =
-  baseline_raw_df |>
+baseline_clean =
+  baseline_raw |>
   filter(is.na(age_at_onset) | age_at_onset > current_age)
 
-nrow(baseline_raw_df)
-nrow(baseline_new_df)
+nrow(baseline_raw)
+nrow(baseline_clean)
 
-baseline_raw_df |>
+baseline_clean |>
   filter(!is.na(age_at_onset)) |>
   nrow()
 
-baseline_new_df |>
-  filter(!is.na(age_at_onset)) |>
-  nrow()
-
-baseline_new_df |>
+baseline_clean |>
   summarize(avg_age = mean(current_age))
 
-baseline_new_df |> 
+baseline_clean |> 
   filter(sex == "Female") |> 
-  summarize(women_carrier = mean(apoe4 == "Carrier"))
+  summarize(woman_carrier = mean(apoe4 == "Carrier"))
 ```
 
 The important steps in importing baseline data is that I had to exclude those who had MCI at baseline; I had to set up a condition to drop rows that had MCI at baseline. Also, I had to change sex and apoe4 variables from a numeric to character variable, so I used the case_match function.
 
-There are 483 participants that were recruited, and 479 remain after excluding those who had MCI at baseline. A total of 97 participants (4 at baseline, 93 at end of study) have developed MCI. For those not excluded, the average baseline age is 65.03 years. The proportion of women that are APOE4 carriers in the study is 0.3 (30%).
+There are 483 participants that were recruited, and 479 remain after excluding those who had MCI at baseline. After removing participants who did not fit the criteria, a total of 93 participants have developed MCI. The average baseline age is 65.03 years. The proportion of women that are APOE4 carriers in the study is 0.3 (30%).
 
 ### Import MCI amyloid data
 
@@ -239,24 +235,29 @@ amyloid_df =
   drop_na(amyloid)
 ```
 
-The important steps in tidying this datafile was pivoting it to be long instead of wide. Additionally, I had to match the baseline and "time_" variables to code for the same variable (time).
+The important steps in tidying this datafile was pivoting it to be long instead of wide. Additionally, I had to match the "baseline" and "time_" variables to code for the same variable (time).
 
 ### Combine MCI data
 
 ```{r}
 baseline_only = 
-  anti_join(baseline_new_df, amyloid_df, by = "id") |>
+  anti_join(baseline_clean, amyloid_df, by = "id") |>
   summarize(n_participants = n_distinct(id))
 
 amyloid_only =
-  anti_join(amyloid_df, baseline_new_df, by = "id") |>
+  anti_join(amyloid_df, baseline_clean, by = "id") |>
   summarize(n_participants = n_distinct(id))
 
-MCI_df =
-  inner_join(baseline_new_df, amyloid_df, by = "id") |>
+MCI_combined =
+  inner_join(baseline_clean, amyloid_df, by = "id") |>
   summarize(n_participants = n_distinct(id))
 
-write_csv(MCI_df, "MCI_combined.csv")
+baseline_only
+amyloid_only
+MCI_combined
+
+MCI_combined |>
+  write_csv("MCI_combined.csv")
 ```
 
 There are 8 participants that are only in baseline_new_df and 16 only in amyloid_df. When combining the two datasets, there is a total of 471 participants that appear in both.
