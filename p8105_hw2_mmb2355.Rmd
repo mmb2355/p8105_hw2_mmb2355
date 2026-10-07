@@ -162,8 +162,9 @@ mutate(
 ```{r}
 trash_wheel_df =
   bind_rows(mr_tw_df, prof_tw_df, gwynnda_df) |> 
-  relocate(trash_wheel) |>
-  nrow()
+  relocate(trash_wheel)
+  
+nrow(trash_wheel_df)
 
 prof_tw_df |>
   pull(weight_tons)|>
