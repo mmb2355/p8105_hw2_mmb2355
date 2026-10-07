@@ -65,7 +65,7 @@ nyc_transit_df |>
   mean()
 ```
 
-The proportion of station entrances/exits that do not have vending that allow entrance is 0.38.
+The proportion of station entrances/exits that do not have vending that allow entrance is 0.38(38%).
 
 ### A train
 
@@ -166,6 +166,8 @@ trash_wheel_df =
   bind_rows(mr_tw_df, prof_tw_df, gwynnda_df) |> 
   relocate(trash_wheel)
 
+nrow(trash_wheel_df)
+
 prof_tw_df |>
   pull(weight_tons)|>
   sum(na.rm = TRUE)
@@ -176,3 +178,50 @@ gwynnda_df |>
 ```
 
 In trash_wheel_df, there are 1,269 observations and key variables are plastic bottles, dumpster, year, and trash wheel type. The total weight of trash collected by Professor Trash Wheel is 294.96 tons. There is a total of 18,120 cigarette butts collected by Gwynnda in June of 2022.
+
+## Problem 3
+
+### Upload MCI baseline data
+
+```{r}
+baseline_raw_df =
+  read.csv("MCI_baseline.csv", 
+  na = c("",".","NA"), skip = 1) |>
+  janitor::clean_names() |>
+  mutate(
+    sex = recode_values(
+      sex,
+      0 ~ "Female",
+      1 ~ "Male"),
+    apoe4 = recode_values(
+      apoe4,
+      0 ~ "Non-Carrier",
+      1 ~ "Carrier")
+  )
+
+baseline_new_df =
+  baseline_raw_df |>
+    filter(is.na(age_at_onset) | age_at_onset > current_age)
+  
+nrow(baseline_raw_df)
+nrow(baseline_new_df)
+
+baseline_raw_df |>
+  filter(!is.na(age_at_onset)) |>
+  nrow()
+
+baseline_new_df |>
+  filter(!is.na(age_at_onset)) |>
+  nrow()
+
+baseline_new_df |>
+  summarize(avg_age = mean(current_age))
+
+baseline_new_df |> 
+  filter(sex == "Female") |> 
+  summarize(women_carrier = mean(apoe4 == "Carrier"))
+```
+
+The important steps in importing baseline data is that I had to exclude those who had MCI at baseline; I had to set up a condition to drop rows that had MCI at baseline. Also, I had to change sex and apoe4 variables from a numeric to character variable, so I used the case_match function.
+
+There are 483 participants that were recruited, and 479 remain after excluding those who had MCI at baseline. A total of 97 participants (4 at baseline, 93 at end of study) have developed MCI. For those not excluded, the average baseline age is 65.03 years. The proportion of women that are APOE4 carriers in the study is 0.3 (30%).
